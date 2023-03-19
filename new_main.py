@@ -60,8 +60,16 @@ while True:
         new_instance.duration = duration
         new_instance.end = datetime.strptime(new_instance.date, "%Y-%m-%d-%H:%M") + timedelta(minutes=int(duration))
         """
-        Najpierw szukamy czy w bazie danych jest już taka rezerwacja
+        Najpierw szukamy czy w bazie danych jest już taka rezerwacja na ten dzień
+        dzień do filtrowania
         """
+        filter_day = "{}-{}-{}".format(year, month, day)
+        print(f"Oto filter day {filter_day}")
+        cursor.execute("SELECT * FROM appointments "
+                       f"WHERE date LIKE '{filter_day}%';")
+        filtered_day = cursor.fetchall()
+        print(filtered_day)
+
         cursor.execute("SELECT * FROM appointments "
                        f"WHERE date='{new_instance.date}'")
         data = cursor.fetchall()

@@ -59,17 +59,30 @@ while True:
         duration = input("Select duration of reservation in minutes (30,60,90): ")
         new_instance.duration = duration
         new_instance.end = datetime.strptime(new_instance.date, "%Y-%m-%d-%H:%M") + timedelta(minutes=int(duration))
-        new_instance.status = "confirmed"
-        cursor.execute("INSERT INTO appointments VALUES (:first_name, :second_name, :date, :duration, :end, :status)",
-                       {'first_name': new_instance.first_name,
-                        'second_name': new_instance.second_name,
-                        'date': new_instance.date,
-                        'duration': new_instance.duration,
-                        'end': new_instance.end,
-                        'status': new_instance.status})
-        connection.commit()
-        print(f"Your reservation is confirmed for {new_instance.date} to {new_instance.end}")
-        print(new_instance.__dict__)
+        """
+        Najpierw szukamy czy w bazie danych jest już taka rezerwacja
+        """
+        cursor.execute("SELECT * FROM appointments "
+                       f"WHERE date='{new_instance.date}'")
+        data = cursor.fetchall()
+        difference = datetime.strptime(datetime.now().strftime("%Y-%m-%d-%H:%M"), "%Y-%m-%d-%H:%M") - datetime.strptime(new_instance.date, "%Y-%m-%d-%H:%M")
+        print(difference)
+        if len(data) > 0:
+            print("Sorry, this date is already taken")
+            continue
+        else:
+            new_instance.status = "confirmed"
+            cursor.execute("INSERT INTO appointments VALUES (:first_name, :second_name, :date, :duration, :end, :status)",
+                           {'first_name': new_instance.first_name,
+                            'second_name': new_instance.second_name,
+                            'date': new_instance.date,
+                            'duration': new_instance.duration,
+                            'end': new_instance.end,
+                            'status': new_instance.status})
+            connection.commit()
+            print(f"Your reservation is confirmed for {new_instance.date} to {new_instance.end}")
+            print(new_instance.__dict__)
+            continue
     if action == "2":
         cursor.execute("SELECT * FROM appointments "
                        f"WHERE first_name='{first_name}' "
@@ -84,10 +97,39 @@ while True:
                        f"AND second_name='{to_delete['second_name']}'"
                        f"AND date='{to_delete['date']}'")
         connection.commit()
+        continue
     if action == "3":
-        pass
+        cursor.execute("SELECT * FROM appointments "
+                       f"WHERE first_name='{first_name}'"
+                       f"AND second_name='{second_name}'")
+        data = cursor.fetchall()
+        for count,row in enumerate(data):
+            print(f"{count}. {row['first_name']} {row['second_name']} {row['date']} - {row['end']}")
+        continue
     if action == "4":
-        pass
+        file_type = input("Select file type (json/csv): ")
+        if file_type == "json":
+            cursor.execute("SELECT * FROM appointments "
+                           f"WHERE first_name='{first_name}' "
+                           f"AND second_name='{second_name}'")
+            data = cursor.fetchall()
+            to_json = json.dumps(data)
+            export_json = open("appointments.json", "w")
+            export_json.write(to_json)
+            export_json.close()
+            continue
+        if file_type == "csv":
+            cursor.execute("SELECT * FROM appointments "
+                           f"WHERE first_name='{first_name}' "
+                           f"AND second_name='{second_name}'")
+            data = cursor.fetchall()
+            headers = ["first_name", "second_name", "date", "duration", "end", "status"]
+            with open("appointments.csv", "w") as export_csv:
+                writer = csv.DictWriter(export_csv, fieldnames=headers)
+                writer.writeheader()
+                writer.writerows(data)
+                export_csv.close()
+            continue
     if action == "5":
         break
 
